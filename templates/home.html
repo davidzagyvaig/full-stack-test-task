@@ -2,41 +2,63 @@
 <html>
 <head>
   <meta charset="utf-8"/>
-  <title>Védett oldal</title>
+  <title>Authentikált oldal</title>
   <style>
-    body { font-family: system-ui, sans-serif; max-width: 800px; margin: 40px auto; }
-    .row { display:flex; gap: 16px; align-items:flex-start; }
-    .col { flex:1; border:1px solid #ddd; padding:16px; border-radius:8px; }
-    code { background:#f6f8fa; padding:2px 4px; border-radius:4px; }
-    button { padding:8px 12px; cursor:pointer; }
-    table { border-collapse: collapse; width:100%; }
-    th, td { border:1px solid #ddd; padding:8px; text-align:left; }
-    .muted { color:#666; }
+    body { font-family: system-ui, sans-serif; background: #f7fbfe; text-align: center; }
+    .box {
+      border: 1px solid #1976d2;
+      border-radius: 10px;
+      padding: 24px 20px;
+      margin: 48px auto;
+      width: fit-content;
+      min-width: 400px;
+      background: #fff;
+      box-shadow: 0 2px 12px rgba(30, 136, 229, 0.06);
+      display: flex;
+      flex-direction: column;
+      align-items: start;
+      text-align: left;
+    }
+    h1 { color: #1976d2; text-align: center; margin-bottom: 18px; }
+    h2 { color: #1976d2; }
+    button {
+      padding: 10px 14px;
+      background: #e3f0fc;
+      color: #1976d2;
+      border: none;
+      border-radius: 6px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    button:hover { background: #b6d4fa; }
+    a[href="/logout"] {
+      display: inline-block;
+      margin: 24px auto 0 auto;
+      padding: 10px 18px;
+      background: #e3f0fc;
+      color: #1976d2;
+      border-radius: 6px;
+      text-decoration: none;
+      font-weight: bold;
+      box-shadow: 0 1px 4px rgba(30,136,229,0.04);
+      transition: background 0.2s;
+    }
+    a[href="/logout"]:hover { background: #b6d4fa; }
   </style>
 </head>
 <body>
-  <h1>Üdv a védett oldalon</h1>
-  <p>Ez az oldal a userhez rendelt <em>connection</em> tokent használja a külső API hívásokhoz.</p>
-  <div class="row">
-    <div class="col">
-      <h2>Profil adatok (reqres)</h2>
-      <p><button id="load">Adatok lekérése</button> <span id="status" class="muted"></span></p>
-      <pre id="out">{}</pre>
-    </div>
-    <div class="col">
-      <h2>Pool állapot</h2>
-      <p><button id="pool">Pool frissítése</button></p>
-      <table>
-        <thead><tr><th>ID</th><th>Státusz</th><th>Assigned</th><th>Last ping</th></tr></thead>
-        <tbody id="pool_tbody"></tbody>
-      </table>
-    </div>
+  <h1>Üdv az alkalmazásban!</h1>
+  <p>Ez az oldal a userhez rendelt connection tokent használja a külső API hívásokhoz.</p>
+  <div class="box">
+    <h2>Profil adatok (reqres)</h2>
+    <p><button id="load">Adatok lekérése</button> <span id="status" class="muted"></span></p>
+    <pre id="out">{}</pre>
   </div>
   <p><a href="/logout">Kijelentkezés</a></p>
   <script>
     const out = document.getElementById('out');
     const status = document.getElementById('status');
-    const poolBody = document.getElementById('pool_tbody');
 
     document.getElementById('load').addEventListener('click', async () => {
       status.textContent = " (töltés...)";
@@ -44,14 +66,6 @@
       const j = await r.json();
       status.textContent = "";
       out.textContent = JSON.stringify(j, null, 2);
-    });
-
-    document.getElementById('pool').addEventListener('click', async () => {
-      const r = await fetch('/api/pool');
-      const j = await r.json();
-      poolBody.innerHTML = j.connections.map(c => (
-        `<tr><td>${c.id}</td><td>${c.status}</td><td>${c.assigned_count}</td><td>${c.last_ping ?? ""}</td></tr>`
-      )).join("");
     });
   </script>
 </body>

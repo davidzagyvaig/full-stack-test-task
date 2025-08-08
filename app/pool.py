@@ -7,6 +7,7 @@ from flask import current_app
 
 logger = logging.getLogger("app")
 
+# Kapcsolat osztály
 class Connection:
     def __init__(self, conn_id: int):
         self.id: int = conn_id
@@ -16,31 +17,31 @@ class Connection:
         self.status: str = "offline"  # offline|online|recycling
         self.created_at: datetime = datetime.utcnow()
 
-    def to_public(self):
-        return {
-            "id": self.id,
-            "status": self.status,
-            "assigned_count": len(self.assigned_users),
-            "last_ping": self.last_ping.isoformat() if self.last_ping else None
-        }
-
+# Kapcsolatok poolja
 class Pool:
     def __init__(self, size: int = 3):
         self._lock = threading.RLock()
         self._conns: List[Connection] = [Connection(i + 1) for i in range(size)]
 
+    # Lock lekérése
     def with_lock(self):
         return self._lock
 
+    # Kapcsolatok listája
     @property
     def conns(self) -> List[Connection]:
         return self._conns
 
-    # ---- lifecycle ----
+    # ---- Kapcsolatok életciklusa ----
+    # Kapcsolat login
     def login_connection(self, c: Connection) -> bool:
         try:
             r = requests.post(
                 "https://reqres.in/api/login",
+                headers={
+                    "Content-Type": "application/json",
+                    "x-api-key": current_app.config.get("REQRES_API_KEY", "reqres-free-v1"),
+                },
                 json={
                     "email": current_app.config["REQRES_EMAIL"],
                     "password": current_app.config["REQRES_PASSWORD"],
@@ -61,30 +62,35 @@ class Pool:
             logger.exception(f"conn_login_exception conn_id={c.id} err={e}")
             return False
 
+    # Kapcsolat logout
     def logout_connection(self, c: Connection) -> None:
         c.token = None
         c.status = "offline"
         logger.info(f"conn_logout conn_id={c.id}")
 
-    # ---- selection & assignment ----
+    # ---- Kiválasztás és hozzárendelés ----
+    # Legkevesebb felhasználóhoz rendelt online kapcsolat kiválasztása
     def pick_least_loaded_online(self) -> Optional[Connection]:
         online = [c for c in self._conns if c.status == "online"]
         if not online:
             return None
         return min(online, key=lambda x: len(x.assigned_users))
 
+    # Felhasználó hozzárendelése kapcsolathoz
     def assign_user(self, username: str, conn: Connection) -> None:
         conn.assigned_users.add(username)
         logger.info(f"assigned_user conn_id={conn.id} user={username} count={len(conn.assigned_users)}")
 
+    # Felhasználó eltávolítása kapcsolatról
     def detach_user(self, username: str, conn: Connection) -> None:
         if username in conn.assigned_users:
             conn.assigned_users.remove(username)
             logger.info(f"detached_user conn_id={conn.id} user={username} count={len(conn.assigned_users)}")
 
-    # ---- external call ----
+    # ---- Külső API hívás ----
     def call_external(self, conn: Connection, method: str, path: str, **kwargs) -> requests.Response:
         headers = kwargs.pop("headers", {})
+        headers.setdefault("x-api-key", current_app.config.get("REQRES_API_KEY", "reqres-free-v1"))
         if conn.token:
             headers["Authorization"] = f"Bearer {conn.token}"
         url = f"https://reqres.in{path}"

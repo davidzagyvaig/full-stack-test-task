@@ -3,6 +3,7 @@ from .auth import require_auth_or_redirect
 
 views_bp = Blueprint("views", __name__)
 
+# Home oldal megjelenítése
 @views_bp.get("/home")
 def home_page():
     redirect_resp = require_auth_or_redirect()
